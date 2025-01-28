@@ -12,7 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the backend code
 COPY . /app
-
+# Ensure the /app directory is writable by all users
+RUN chmod -R 777 /app
 # Define ARG for each environment variable
 ARG DATABASE_URL
 ARG EMAIL
