@@ -5,13 +5,13 @@ FROM python:3.12
 WORKDIR /app
 
 # Copy requirements.txt from the backend directory
-COPY ./Backend-app/requirements.txt .
+COPY requirements.txt .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the backend code
-COPY ./Backend-app /app
+COPY . /app
 
 # Define ARG for each environment variable
 ARG DATABASE_URL
