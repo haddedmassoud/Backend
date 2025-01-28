@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-db
+  labels:
+    app: backend-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-db
+  template:
+    metadata:
+      labels:
+        app: backend-db
+    spec:
+      containers:
+      - name: backend-db
+        image: backend-image # Your backend image with the Postgres setup
+        env:
+        - name: POSTGRES_USER
+          value: "user"
+        - name: POSTGRES_PASSWORD
+          value: "password"
+        - name: POSTGRES_DB
+          value: "dbname"
+        - name: DATABASE_URL
+          value: "postgresql://user:password@db:5432/dbname" # Use the service name here
+        - name: BACKEND_URL
+          value: "http://backend:8000" # Using internal service URL for the backend
+        ports:
+        - containerPort: 8000 # Backend port
+        - containerPort: 5432 # Postgres port
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: init-sql
+          mountPath: /docker-entrypoint-initdb.d # Postgres will run all .sql files in this directory
+          subPath: init.sql # Ensure to mount only the init.sql file from the backend repo
+
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+      - name: init-sql
+        configMap:
+          name: init-sql-config # You can use a ConfigMap to store init.sql, but also possible with GitRepo
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-db-service
+spec:
+  selector:
+    app: backend-db
+  ports:
+  - protocol: TCP
+    port: 5432 # Postgres port
+    targetPort: 5432
+  - protocol: TCP
+    port: 8000 # Backend port
+    targetPort: 8000 # Backend port
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: init-sql-config
+data:
+  init.sql: |
+    -- Your init.sql content goes here.
+    -- This SQL will be executed during DB container initialization
+    CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(100));
